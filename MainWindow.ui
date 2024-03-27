@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>880</width>
+    <height>789</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_5">
+    <property name="leftMargin">
+     <number>2</number>
+    </property>
+    <property name="topMargin">
+     <number>2</number>
+    </property>
+    <property name="rightMargin">
+     <number>2</number>
+    </property>
+    <property name="bottomMargin">
+     <number>2</number>
+    </property>
+    <item>
+     <widget class="QSplitter" name="codeDataSplitter">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="QTableWidget" name="codeTable">
+       <property name="font">
+        <font>
+         <family>Cascadia Mono</family>
+        </font>
+       </property>
+       <property name="rowCount">
+        <number>1</number>
+       </property>
+       <property name="columnCount">
+        <number>2</number>
+       </property>
+       <row/>
+       <column/>
+       <column/>
+      </widget>
+      <widget class="QSplitter" name="stackVarSplitter">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <widget class="QSplitter" name="userSystemSplitter">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <widget class="QFrame" name="frame_2">
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Plain</enum>
+         </property>
+         <property name="lineWidth">
+          <number>0</number>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="userLabel">
+            <property name="text">
+             <string>User Stack</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTableWidget" name="userTable">
+            <property name="font">
+             <font>
+              <family>Cascadia Mono</family>
+             </font>
+            </property>
+            <property name="rowCount">
+             <number>1</number>
+            </property>
+            <property name="columnCount">
+             <number>1</number>
+            </property>
+            <attribute name="horizontalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
+            <row/>
+            <column/>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QFrame" name="frame_3">
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Plain</enum>
+         </property>
+         <property name="lineWidth">
+          <number>0</number>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_4">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="systemLabel">
+            <property name="text">
+             <string>System Stack</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTableWidget" name="systemTable">
+            <property name="font">
+             <font>
+              <family>Cascadia Mono</family>
+             </font>
+            </property>
+            <property name="rowCount">
+             <number>1</number>
+            </property>
+            <property name="columnCount">
+             <number>1</number>
+            </property>
+            <attribute name="horizontalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
+            <row/>
+            <column/>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+       <widget class="QSplitter" name="globalLocalSplitter">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <widget class="QWidget" name="layoutWidget">
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <item>
+           <widget class="QLabel" name="globalLabel">
+            <property name="text">
+             <string>Globals</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTableWidget" name="globalTable">
+            <property name="font">
+             <font>
+              <family>Cascadia Mono</family>
+             </font>
+            </property>
+            <property name="rowCount">
+             <number>1</number>
+            </property>
+            <property name="columnCount">
+             <number>2</number>
+            </property>
+            <attribute name="verticalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
+            <row/>
+            <column/>
+            <column/>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="layoutWidget_2">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QLabel" name="localLabel">
+            <property name="text">
+             <string>Locals</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTableWidget" name="localTable">
+            <property name="font">
+             <font>
+              <family>Cascadia Mono</family>
+             </font>
+            </property>
+            <property name="rowCount">
+             <number>1</number>
+            </property>
+            <property name="columnCount">
+             <number>2</number>
+            </property>
+            <attribute name="verticalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
+            <row/>
+            <column/>
+            <column/>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>880</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu_File">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="action_Exit"/>
+   </widget>
+   <widget class="QMenu" name="menu_Debug">
+    <property name="title">
+     <string>&amp;Debug</string>
+    </property>
+    <addaction name="action_Word"/>
+    <addaction name="actionSet_Breakpoint"/>
+    <addaction name="actionStep_Over"/>
+    <addaction name="actionStep_Into"/>
+    <addaction name="actionRun"/>
+   </widget>
+   <addaction name="menu_File"/>
+   <addaction name="menu_Debug"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="action_Exit">
+   <property name="text">
+    <string>&amp;Exit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+W</string>
+   </property>
+  </action>
+  <action name="action_Word">
+   <property name="text">
+    <string>&amp;Word</string>
+   </property>
+   <property name="shortcut">
+    <string>F3</string>
+   </property>
+  </action>
+  <action name="actionSet_Breakpoint">
+   <property name="text">
+    <string>Set Breakpoint</string>
+   </property>
+   <property name="shortcut">
+    <string>F9</string>
+   </property>
+  </action>
+  <action name="actionStep_Over">
+   <property name="text">
+    <string>Step Over</string>
+   </property>
+   <property name="shortcut">
+    <string>F10</string>
+   </property>
+  </action>
+  <action name="actionStep_Into">
+   <property name="text">
+    <string>Step Into</string>
+   </property>
+   <property name="shortcut">
+    <string>F11</string>
+   </property>
+  </action>
+  <action name="actionRun">
+   <property name="text">
+    <string>Run</string>
+   </property>
+   <property name="shortcut">
+    <string>F5</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
