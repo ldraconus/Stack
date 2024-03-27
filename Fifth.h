@@ -12,33 +12,36 @@ namespace Fifth {
 typedef    long long Integer;
 typedef  long double Real;
 typedef std::wstring String;
-class Map;
 class Stack;
+class Table;
 class Vector;
 class External;
 
-typedef std::variant<Integer, Real, String, External*, void*> Value;
-enum Type { INTEGER, REAL, STRING, EXTERNAL, VALUEPTR };
+typedef std::variant<Integer, Real, String, External*, Table*, void*> Value;
+enum Type { INTEGER, REAL, STRING, EXTERNAL, TABLE, VALUEPTR };
 
-static constexpr  int   IMMEDIATE = 0b00000001;
+static constexpr  int IMMEDIATE   = 0b00000001;
 static constexpr  int COMPILETIME = 0b00000010;
 static constexpr bool RELOAD      = true;
 
-class Map {
+class Table {
 private:
     std::unordered_map<Value, Value> mValue;
 
 public:
-    Map() {}
+    Table() {}
 
     Value operator[](const Value& x) { return mValue[x]; }
 
-      Map* append(const Map* m) { mValue.insert(m->mValue.begin(), m->mValue.end()); return this; }
-      void clear()              { mValue.clear(); }
-      bool contains(Value x )   { return mValue.contains(x); }
-      void erase(Value x)       { if (mValue.contains(x)) { mValue.erase(mValue.find(x)); } }
-    size_t size() const         { return mValue.size(); }
-      bool empty()              { return mValue.empty(); }
+    auto begin() { return mValue.begin(); }
+    auto end()   { return mValue.end(); }
+
+      Table* append(const Table* m) { mValue.insert(m->mValue.begin(), m->mValue.end()); return this; }
+        void clear()                { mValue.clear(); }
+        bool contains(Value x )     { return mValue.contains(x); }
+      Table* erase(Value x)         { if (mValue.contains(x)) { mValue.erase(mValue.find(x)); } return this; }
+      size_t size() const           { return mValue.size(); }
+        bool empty()                { return mValue.empty(); }
 };
 
 class Vector {
@@ -72,9 +75,12 @@ public:
 
     NO(External);
 
-    virtual bool empty()                                      { return true; }
-    virtual void install(VM*)                                 { } // <-- handles installing this External type words.
-    virtual void send(VM*, const std::wstring&, const Value&) { }
+      virtual bool empty()                                      { return true; }
+      virtual void install(VM*)                                 { } // <-- handles installing this External type words.
+      virtual void send(VM*, const std::wstring&, const Value&) { }
+      virtual Real toReal()                                     { return 0.0; }
+    virtual String toString()                                   { return L"External"; }
+   virtual Integer toInteger()                                  { return 0; }
 };
 
 inline Integer asInteger(const Value& v) {
@@ -82,7 +88,8 @@ inline Integer asInteger(const Value& v) {
     case INTEGER:  return std::get<Integer>(v);
     case REAL:     return std::get<Real>(v);                       // NOLINT
     case STRING:   return std::stoll(std::get<String>(v));         // NOLINT
-    case EXTERNAL: return 0;
+    case EXTERNAL: return std::get<External*>(v)->toInteger();     // NOLINT
+    case TABLE:    return std::get<Table*>(v)->size();             // NOLINT
     case VALUEPTR: return asInteger(*(Value*) std::get<void*>(v)); // NOLINT
     }
     return 0;
@@ -93,7 +100,8 @@ inline Real asReal(const Value& v) {
     case INTEGER:  return std::get<Integer>(v);
     case REAL:     return std::get<Real>(v);                       // NOLINT
     case STRING:   return std::stold(std::get<String>(v));         // NOLINT
-    case EXTERNAL: return 0;
+    case EXTERNAL: return std::get<External*>(v)->toInteger();     // NOLINT
+    case TABLE:    return std::get<Table*>(v)->size();             // NOLINT
     case VALUEPTR: return asReal(*(Value*) std::get<void*>(v));    // NOLINT
     }
     return 0;
@@ -103,9 +111,16 @@ inline std::wstring asString(const Value& v) {
     switch (v.index()) {
     case INTEGER:  return std::to_wstring(std::get<Integer>(v));
     case REAL:     return std::to_wstring(std::get<Real>(v));
-    case STRING:   return std::get<String>(v);
-    case EXTERNAL: return L"(x)";
+    case STRING:   return L"'" + std::get<String>(v) + L"'";
+    case EXTERNAL: return std::get<External*>(v)->toString();
     case VALUEPTR: return asString(*(Value*) std::get<void*>(v)); // NOLINT
+    case TABLE: {
+            String answer = L"{\r\n";
+            Table* tbl = std::get<Table*>(v);
+            for (const auto& entry: *tbl) answer += L" " + asString(entry.first) + L": " + asString(entry.second) + L";\r\n";
+            answer += L"}";
+            return answer;
+        }
     }
     return L"";
 }
@@ -116,6 +131,7 @@ inline bool isTrue(const Value& v) {
     case REAL:     return std::get<Real>(v) != 0.0;
     case STRING:   return !std::get<String>(v).empty();
     case EXTERNAL: return !std::get<External*>(v)->empty();
+    case TABLE:    return !std::get<Table*>(v)->empty();
     case VALUEPTR: return isTrue(*(Value*) std::get<void*>(v)); // NOLINT
     }
     return false;

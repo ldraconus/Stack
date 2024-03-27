@@ -11,10 +11,10 @@ static constexpr Real Half = 0.5;
 
 static std::wstring toString(VM* vm, Compiled* code, const Value& v) {
     switch (v.index()) {
-    case INTEGER:  return std::to_wstring(std::get<Integer>(v));
-    case REAL:     return std::to_wstring(std::get<Real>(v));
-    case STRING:   return L"'" + std::get<String>(v) + L"'";
-    case EXTERNAL: return L"(x)";
+    case INTEGER:
+    case REAL:
+    case STRING:
+    case EXTERNAL: return asString(v);
     case VALUEPTR: {
             Value* ptr = (Value*) std::get<void*>(v);                                      // NOLINT
             if (code->reverse().contains(ptr)) return L"local:" + code->reverse()[ptr];
@@ -68,6 +68,7 @@ void add(VM* vm) {
         case INTEGER:  vm->push(Integer(asReal(left) + asReal(right) + Half));          break;
         case REAL:     vm->push(asReal(left) + asReal(right));                          break;
         case STRING:   vm->push(std::get<STRING>(left) + asString(right));              break;
+        case TABLE:    (*std::get<TABLE>(left))[right] = 0; vm->push(left);             break;
         case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"+", right); vm->push(left); break;
         case VALUEPTR:
             if (right.index() > REAL) vm->push(left);
@@ -82,11 +83,12 @@ void add(VM* vm) {
         return;
     }
     switch (left.index()) {
-    case INTEGER:  vm->push(std::get<INTEGER>(left) + std::get<INTEGER>(right));      break;
-    case REAL:     vm->push(std::get<REAL>(left) + std::get<REAL>(right));            break;
-    case STRING:   vm->push(std::get<STRING>(left) + std::get<STRING>(right));        break;
-    case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"+", right); vm->push(left);   break;
-    case VALUEPTR: vm->push(left);                                                    break;
+    case INTEGER:  vm->push(std::get<INTEGER>(left) + std::get<INTEGER>(right));     break;
+    case REAL:     vm->push(std::get<REAL>(left) + std::get<REAL>(right));           break;
+    case STRING:   vm->push(std::get<STRING>(left) + std::get<STRING>(right));       break;
+    case TABLE:    vm->push(std::get<TABLE>(left)->append(std::get<TABLE>(right)));  break;
+    case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"+", right); vm->push(left);  break;
+    case VALUEPTR: vm->push(left);                                                   break;
     }
 }
 
@@ -306,6 +308,7 @@ void divide(VM* vm) {
         case INTEGER:  vm->push(Integer(asReal(left) / asReal(right) + Half));          break;
         case REAL:     vm->push(asReal(left) / asReal(right));                          break;
         case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"/", right); vm->push(left); break;
+        case TABLE:
         case VALUEPTR: vm->push(left);                                                  break;
         case STRING: {
                 switch (right.index()) {
@@ -352,6 +355,7 @@ void divide(VM* vm) {
     case INTEGER:  vm->push(std::get<INTEGER>(left) / std::get<INTEGER>(right));    break;
     case REAL:     vm->push(std::get<REAL>(left) / std::get<REAL>(right));          break;
     case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"/", right); vm->push(left); break;
+    case TABLE:
     case VALUEPTR: vm->push(left);                                                  break;
     case STRING: {
             String str = get<STRING>(left);
@@ -464,6 +468,7 @@ void equal(VM* vm) {
     case INTEGER:  vm->push(std::get<INTEGER>(left) == std::get<INTEGER>(right));   break;
     case REAL:     vm->push(std::get<REAL>(left) == std::get<REAL>(right));         break;
     case STRING:   vm->push(std::get<STRING>(left) == std::get<STRING>(right));     break;
+    case TABLE:    vm->push(std::get<TABLE>(left) == std::get<TABLE>(right));       break;
     case EXTERNAL: vm->push(std::get<EXTERNAL>(left) == std::get<EXTERNAL>(right)); break;
     case VALUEPTR: vm->push(std::get<VALUEPTR>(left) == std::get<VALUEPTR>(right)); break;
     }
@@ -505,6 +510,7 @@ void greater(VM* vm) {
     case REAL:     vm->push(std::get<REAL>(left) > std::get<REAL>(right));                     break;
     case STRING:   vm->push(std::get<STRING>(left) > std::get<STRING>(right));                 break;
     case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L">", right); vm->push(left);            break;
+    case TABLE:    vm->push(std::get<TABLE>(left)->size() > std::get<TABLE>(right)->size());   break;
     case VALUEPTR: vm->push(std::get<VALUEPTR>(left) > std::get<VALUEPTR>(right));             break;
     }
 }
@@ -523,6 +529,7 @@ void greaterEqual(VM* vm) {
     case REAL:     vm->push(std::get<REAL>(left) >= std::get<REAL>(right));                     break;
     case STRING:   vm->push(std::get<STRING>(left) >= std::get<STRING>(right));                 break;
     case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L">=", right); vm->push(left);            break;
+    case TABLE:    vm->push(std::get<TABLE>(left)->size() >= std::get<TABLE>(right)->size());   break;
     case VALUEPTR: vm->push(std::get<VALUEPTR>(left) >= std::get<VALUEPTR>(right));             break;
     }
 }
@@ -552,6 +559,7 @@ void less(VM* vm) {
     case REAL:     vm->push(std::get<REAL>(left) < std::get<REAL>(right));                     break;
     case STRING:   vm->push(std::get<STRING>(left) < std::get<STRING>(right));                 break;
     case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"<", right); vm->push(left);            break;
+    case TABLE:    vm->push(std::get<TABLE>(left)->size() < std::get<TABLE>(right)->size());   break;
     case VALUEPTR: vm->push(std::get<VALUEPTR>(left) < std::get<VALUEPTR>(right));             break;
     }
 }
@@ -570,6 +578,7 @@ void lessEqual(VM* vm) {
     case REAL:     vm->push(std::get<REAL>(left) <= std::get<REAL>(right));                     break;
     case STRING:   vm->push(std::get<STRING>(left) <= std::get<STRING>(right));                 break;
     case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"<=", right); vm->push(left);            break;
+    case TABLE:    vm->push(std::get<TABLE>(left)->size() <= std::get<TABLE>(right)->size());   break;
     case VALUEPTR: vm->push(std::get<VALUEPTR>(left) <= std::get<VALUEPTR>(right));             break;
     }
 }
@@ -584,7 +593,8 @@ void modulo(VM* vm) {
         case INTEGER:                                                                                   break;
         case REAL:     vm->push(asInteger(right) ? abs(long(asInteger(left) % asInteger(right))) : -1); break;
         case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"%", right); vm->push(left);                 break;
-        case VALUEPTR: vm->push(left);                                                                  break;
+        case VALUEPTR:
+        case TABLE:
         case STRING:   vm->push(left);                                                                  break;
         }
         return;
@@ -593,7 +603,8 @@ void modulo(VM* vm) {
     case INTEGER:
     case REAL:     vm->push(asInteger(left) % asInteger(right));                    break;
     case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"%", right); vm->push(left); break;
-    case VALUEPTR: vm->push(left);                                                  break;
+    case VALUEPTR:
+    case TABLE:
     case STRING:   vm->push(left);                                                  break;
     }
 }
@@ -608,6 +619,7 @@ void multiply(VM* vm) {
         case INTEGER:  vm->push(Integer(asReal(left) * asReal(right) + Half));          break;
         case REAL:     vm->push(asReal(left) * asReal(right));                          break;
         case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"*", right); vm->push(left); break;
+        case TABLE:
         case VALUEPTR: vm->push(left);                                                  break;
         case STRING: {
                 switch (right.index()) {
@@ -640,8 +652,9 @@ void multiply(VM* vm) {
     switch (left.index()) {
     case INTEGER:  vm->push(std::get<INTEGER>(left) * std::get<INTEGER>(right));    break;
     case REAL:     vm->push(std::get<REAL>(left) * std::get<REAL>(right));          break;
-    case STRING:   vm->push(left);                                                  break;
     case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"*", right); vm->push(left); break;
+    case STRING:
+    case TABLE:
     case VALUEPTR: vm->push(left);                                                  break;
     }
 }
@@ -698,6 +711,7 @@ void notEqual(VM* vm) {
     case REAL:     vm->push(std::get<REAL>(left) != std::get<REAL>(right));                     break;
     case STRING:   vm->push(std::get<STRING>(left) != std::get<STRING>(right));                 break;
     case EXTERNAL: vm->push(std::get<EXTERNAL>(left) != std::get<EXTERNAL>(right));             break;
+    case TABLE:    vm->push(std::get<TABLE>(left)->size() != std::get<TABLE>(right)->size());   break;
     case VALUEPTR: vm->push(std::get<VALUEPTR>(left) != std::get<VALUEPTR>(right));             break;
     }
 }
@@ -716,7 +730,7 @@ void power(VM* vm) {
 }
 
 //
-//                                    [ (var) 1 ]            [ (start) (t) ?(b) ]  [ ?1 ]
+//                                    [ (var) 1/0 ]          [ (start) (t) ?(b) ]  [ ?1 ]
 //    if (syspop == 1) $ move         [ (var) ]              [ (start) (to) (by) ] [ ]
 //    $ sysmove                       [ (var) ]              [ (start) (to) ]      [ (by) ]
 //    $ sysmove                       [ (var) ]              [ (start) ]           [ (by) (to) ]
@@ -796,6 +810,7 @@ void subtract(VM* vm) {
         case INTEGER:  vm->push(Integer(asReal(left) - asReal(right) + Half));          break;
         case REAL:     vm->push(asReal(left) - asReal(right));                          break;
         case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"-", right); vm->push(left); break;
+        case TABLE:    vm->push(std::get<TABLE>(left)->erase(right));                   break;
         case VALUEPTR: vm->push(left);                                                  break;
         case STRING: {
                 auto s = std::get<STRING>(left);
@@ -818,6 +833,7 @@ void subtract(VM* vm) {
     case INTEGER:  vm->push(std::get<INTEGER>(left) - std::get<INTEGER>(right));    break;
     case REAL:     vm->push(std::get<REAL>(left) - std::get<REAL>(right));          break;
     case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"-", right); vm->push(left); break;
+    case TABLE:    vm->push(std::get<TABLE>(left)->erase(right));                   break;
     case VALUEPTR: vm->push(left);                                                  break;
     case STRING:   {
             auto s = asString(left);
@@ -826,6 +842,10 @@ void subtract(VM* vm) {
         }
         break;
     }
+}
+
+void table(VM* vm) {
+
 }
 
 void then(VM* vm) {
@@ -938,6 +958,7 @@ Fifth::VM::VM()
     builtin(L"next",    next,       IMMEDIATE | COMPILETIME);
     builtin(L"each",    step,       IMMEDIATE | COMPILETIME);
     builtin(L"return",  doReturn,   IMMEDIATE | COMPILETIME);
+    builtin(L"table",   table,      IMMEDIATE);
     builtin(L"then",    then,       IMMEDIATE | COMPILETIME);
     builtin(L"while",   doWhile,    IMMEDIATE | COMPILETIME);
     builtin(L"var",     var,        IMMEDIATE);
