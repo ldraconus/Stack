@@ -31,7 +31,7 @@ private:
 public:
     Table() {}
 
-    Value operator[](const Value& x) { return mValue[x]; }
+    Value& operator[](const Value& x) { return mValue[x]; }
 
     auto begin() { return mValue.begin(); }
     auto end()   { return mValue.end(); }
@@ -51,7 +51,7 @@ private:
 public:
     Vector() { }
 
-    Value operator[](Integer x) { return mValue[x]; }
+    Value& operator[](Integer x) { return mValue[x]; }
 
        void append(Value v)         { mValue.push_back(v); }
     Vector* append(const Vector* v) { mValue.insert(mValue.end(), v->mValue.begin(), v->mValue.end()); return this; }
@@ -283,6 +283,8 @@ private:
                                    Stack mSystem;
                                    Stack mUser;
 
+                    std::map<Value, int> mPrecedence;
+
 public:
     VM();
 
@@ -333,6 +335,7 @@ public:
     std::vector<std::wstring> globalVars();
     std::vector<std::wstring> localVars();
                        size_t pc();
+        std::map<Value, int>& precedence() { return mPrecedence; };
                          void run();
                          void stepInto();
                          void stepOver();
@@ -341,6 +344,7 @@ public:
          std::optional<Value> word(bool reload = false);
 
     std::wstring debugUserStack();
+
 };
 
 }

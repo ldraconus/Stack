@@ -116,33 +116,33 @@ void array(VM* vm) {
     }
 }
 
-std::map<Value, int> precedence; // NOLINT
-
 void algebra(VM* vm) {
-    if (precedence.empty()) {
+    if (vm->precedence().empty()) {
         constexpr int BOOL = 10;
         constexpr int COMP = 20;
         constexpr int ADD  = 30;
         constexpr int MULT = 40;
         constexpr int POW  = 50;
-        precedence[L"and"]  = BOOL;
-        precedence[L"or"]   = BOOL;
-        precedence[L"nand"] = BOOL;
-        precedence[L"nor"]  = BOOL;
-        precedence[L"xor"]  = BOOL;
-        precedence[L"<="]   = COMP;
-        precedence[L"<"]    = COMP;
-        precedence[L"="]    = COMP;
-        precedence[L"!="]   = COMP;
-        precedence[L"<>"]   = COMP;
-        precedence[L">"]    = COMP;
-        precedence[L">="]   = COMP;
-        precedence[L"+"]    = ADD;
-        precedence[L"-"]    = ADD;
-        precedence[L"*"]    = MULT;
-        precedence[L"/"]    = MULT;
-        precedence[L"%"]    = MULT;
-        precedence[L"^"]    = POW;
+        constexpr int REF  = 60;
+        vm->precedence()[L"and"]  = BOOL;
+        vm->precedence()[L"or"]   = BOOL;
+        vm->precedence()[L"nand"] = BOOL;
+        vm->precedence()[L"nor"]  = BOOL;
+        vm->precedence()[L"xor"]  = BOOL;
+        vm->precedence()[L"<="]   = COMP;
+        vm->precedence()[L"<"]    = COMP;
+        vm->precedence()[L"="]    = COMP;
+        vm->precedence()[L"!="]   = COMP;
+        vm->precedence()[L"<>"]   = COMP;
+        vm->precedence()[L">"]    = COMP;
+        vm->precedence()[L">="]   = COMP;
+        vm->precedence()[L"+"]    = ADD;
+        vm->precedence()[L"-"]    = ADD;
+        vm->precedence()[L"*"]    = MULT;
+        vm->precedence()[L"/"]    = MULT;
+        vm->precedence()[L"%"]    = MULT;
+        vm->precedence()[L"^"]    = POW;
+        vm->precedence()[L"[*]"]  = REF;
     }
     vm->syspush(L"[");
 
@@ -165,10 +165,10 @@ void algebra(VM* vm) {
                     }
                     if (top == L"[") break;
                     vm->syspop(); // Remove '(' or '['
-                } else if (precedence.contains(token)){
+                } else if (vm->precedence().contains(token)){
                     Value systop = vm->systop();
                     String top = std::get<String>(systop);
-                    while (top != L"[" && hasHigherPrecedence(precedence, systop, token)) {
+                    while (top != L"[" && hasHigherPrecedence(vm->precedence(), systop, token)) {
                         applyOperator(vm, systop);
                         vm->syspop();
                         systop = vm->systop();
@@ -488,6 +488,22 @@ void explode(VM* vm) {
     vm->push(Integer(str.size()));
 }
 
+void fetch(VM* vm) {
+    if (vm->size() < 2) return;
+    Value right = vm->pop();
+    Value left = vm->pop();
+
+    if (left.index() != TABLE) {
+        vm->push(left);
+        return;
+    }
+
+    Table& tbl = *std::get<TABLE>(left);
+    Value val = tbl[right];
+    vm->push(val);
+}
+
+
 void get(VM* vm) {
     if (vm->empty()) return;
     Value value = vm->pop();
@@ -583,6 +599,21 @@ void lessEqual(VM* vm) {
     }
 }
 
+void index(VM* vm) {
+    if (vm->size() < 2) return;
+    Value right = vm->pop();
+    Value left = vm->pop();
+
+    if (left.index() != TABLE) {
+        vm->push(left);
+        return;
+    }
+
+    Table& tbl = *std::get<TABLE>(left);
+    Value* ptr = &tbl[right];
+    vm->push((void*)(ptr));
+}
+
 void modulo(VM* vm) {
     if (vm->size() < 2) return;
     Value right = vm->pop();
@@ -591,7 +622,7 @@ void modulo(VM* vm) {
     if (bool res = left.index() != right.index(); res) {
         switch (left.index()) {
         case INTEGER:                                                                                   break;
-        case REAL:     vm->push(asInteger(right) ? abs(long(asInteger(left) % asInteger(right))) : -1); break;
+        case REAL:     vm->push(asInteger(right) ? abs(long(asInteger(left) % asInteger(right))) : -1); break; // NOLINT
         case EXTERNAL: std::get<EXTERNAL>(left)->send(vm, L"%", right); vm->push(left);                 break;
         case VALUEPTR:
         case TABLE:
@@ -727,6 +758,47 @@ void power(VM* vm) {
     Real n1 = asReal(left);
     Real n2 = asReal(right);
     vm->push(pow(n1, n2));                               // NOLINT
+}
+
+void resize(VM* vm) {
+    if (vm->size() < 2) return;
+
+    Value val = vm->pop();
+    Integer size = asInteger(val);
+    if (size < 1) return;
+
+    val = vm->pop();
+    if (val.index() != VALUEPTR) return;
+    Value* ptr = (Value*)(std::get<VALUEPTR>(val)); // NOLINT
+
+    if (vm->code()) {
+        Code* code = vm->code();
+        String name = code->reverse()[ptr];
+        code->locals()[name].resize(size);
+    } else {
+        String name = vm->reverse()[ptr];
+        vm->globals()[name].resize(size);
+    }
+}
+
+void size(VM* vm) {
+    if (vm->size() < 1) return;
+
+    Value val = vm->pop();
+    if (val.index() != VALUEPTR) {
+        vm->push(0);
+        return;
+    }
+
+    Value* ptr = (Value*)(std::get<VALUEPTR>(val)); // NOLINT
+    if (vm->code()) {
+        Code* code = vm->code();
+        String name = code->reverse()[ptr];
+        vm->push(Integer(code->locals()[name].size()));
+    } else {
+        String name = vm->reverse()[ptr];
+        vm->push(Integer(vm->globals()[name].size()));
+    }
 }
 
 //
@@ -965,6 +1037,7 @@ Fifth::VM::VM()
 
     builtin(L"and",     [](VM* vm) { Value right = vm->pop(); Value left = vm->pop(); vm->push(isTrue(left) && isTrue(right)); });
     builtin(L"ch",      [](VM* vm) { cstd::out.putChar(asInteger(vm->pop())); });                                                                                        // NOLINT
+    builtin(L"depth",   [](VM* vm) { vm->size(); });
     builtin(L"dup",     [](VM* vm) { vm->dup(); });
     builtin(L"empty",   [](VM* vm) { vm->push(vm->empty()); });
     builtin(L"explode", explode);
@@ -977,9 +1050,10 @@ Fifth::VM::VM()
     builtin(L"or",      [](VM* vm) { Value right = vm->pop(); Value left = vm->pop(); vm->push(isTrue(left) || isTrue(right)); });
     builtin(L"pop",     [](VM* vm) { vm->pop(); });
     builtin(L"print",   [](VM* vm) { cstd::out.putString(asString(vm->pop())); });
+    builtin(L"resize",  resize);
     builtin(L"rot",     [](VM* vm) { vm->rot(); });
     builtin(L"rrot",    [](VM* vm) { vm->rrot(); });
-    builtin(L"size",    [](VM* vm) { vm->size(); });
+    builtin(L"size",    Fifth::size);
     builtin(L"swap",    [](VM* vm) { vm->swap(); });
     builtin(L"sysdup",  [](VM* vm) { vm->sysdup(); });
     builtin(L"sysmove", [](VM* vm) { vm->sysmove(); });
@@ -994,21 +1068,23 @@ Fifth::VM::VM()
 
     builtin(L"(",  algebra, IMMEDIATE);
 
-    builtin(L"->", storeRight);
-    builtin(L"<-", storeLeft);
-    builtin(L"<>", notEqual);
-    builtin(L"!=", notEqual);
-    builtin(L"=",  equal);
-    builtin(L"<=", lessEqual);
-    builtin(L"<",  less);
-    builtin(L">=", greaterEqual);
-    builtin(L">",  greater);
-    builtin(L"+",  add);
-    builtin(L"-",  subtract);
-    builtin(L"*",  multiply);
-    builtin(L"/",  divide);
-    builtin(L"%",  modulo);
-    builtin(L"^",  power);
+    builtin(L"[]",  index);
+    builtin(L"[*]", fetch);
+    builtin(L"->",  storeRight);
+    builtin(L"<-",  storeLeft);
+    builtin(L"<>",  notEqual);
+    builtin(L"!=",  notEqual);
+    builtin(L"=",   equal);
+    builtin(L"<=",  lessEqual);
+    builtin(L"<",   less);
+    builtin(L">=",  greaterEqual);
+    builtin(L">",   greater);
+    builtin(L"+",   add);
+    builtin(L"-",   subtract);
+    builtin(L"*",   multiply);
+    builtin(L"/",   divide);
+    builtin(L"%",   modulo);
+    builtin(L"^",   power);
 }
 
 void Fifth::VM::breakAt(int at) {
